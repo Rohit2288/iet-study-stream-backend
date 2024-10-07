@@ -39,7 +39,7 @@ app.use(express.json());
 
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = [process.env.CORS_ORIGIN];
+    const allowedOrigins = ['https://iet-study-stream.netlify.app'];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
