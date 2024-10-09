@@ -46,6 +46,53 @@
 // module.exports = upload;
 // 
 
+// const multer = require('multer');
+// const multerS3 = require('multer-s3');
+// const { S3Client } = require('@aws-sdk/client-s3');
+// const path = require('path');
+
+// // Configure AWS
+// const s3Client = new S3Client({
+//   region: process.env.AWS_REGION,
+//   credentials: {
+//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+//   },
+// });
+
+// const upload = multer({
+//   storage: multerS3({
+//     s3: s3Client,
+//     bucket: process.env.S3_BUCKET_NAME,
+//     acl: 'public-read',
+//     key: function (req, file, cb) {
+//       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//       cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+//     }
+//   }),
+//   fileFilter: (req, file, cb) => {
+//     const allowedTypes = [
+//       'image/jpeg',
+//       'image/png',
+//       'image/gif',
+//       'application/pdf',
+//       'application/msword',
+//       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+//     ];
+
+//     if (allowedTypes.includes(file.mimetype)) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error('Invalid file type'), false);
+//     }
+//   },
+//   limits: {
+//     fileSize: 5 * 1024 * 1024 // 5MB limit
+//   }
+// });
+
+// module.exports = upload;
+
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const { S3Client } = require('@aws-sdk/client-s3');
@@ -60,10 +107,17 @@ const s3Client = new S3Client({
   },
 });
 
+// Ensure S3 bucket name is set
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
+if (!S3_BUCKET_NAME) {
+  console.error('S3_BUCKET_NAME is not set in environment variables');
+  process.exit(1);
+}
+
 const upload = multer({
   storage: multerS3({
     s3: s3Client,
-    bucket: process.env.S3_BUCKET_NAME,
+    bucket: S3_BUCKET_NAME,
     acl: 'public-read',
     key: function (req, file, cb) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
