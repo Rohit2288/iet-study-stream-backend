@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { authenticateToken } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const { upload, uploadToSupabase } = require('../middleware/upload');
 
 const prisma = new PrismaClient();
 
@@ -86,6 +86,30 @@ router.get('/rooms/:roomId/messages', authenticateToken, async (req, res) => {
 //   }
 // });
 
+// router.post('/upload', authenticateToken, upload.array('files'), async (req, res) => {
+//   try {
+//     const files = req.files;
+    
+//     if (!files || files.length === 0) {
+//       return res.status(400).json({ message: 'No files uploaded' });
+//     }
+
+//     // With S3, the file location is provided in the file object
+//     const fileUrls = files.map(file => file.location);
+
+//     // You might want to save these URLs to your database here
+//     // For example, if you're associating these files with a user:
+//     // await prisma.user.update({
+//     //   where: { id: req.user.id },
+//     //   data: { uploadedFiles: { push: fileUrls } }
+//     // });
+
+//     res.json({ fileUrls });
+//   } catch (error) {
+//     console.error('Error uploading files:', error);
+//     res.status(500).json({ message: 'Error uploading files' });
+//   }
+// });
 router.post('/upload', authenticateToken, upload.array('files'), async (req, res) => {
   try {
     const files = req.files;
@@ -94,8 +118,7 @@ router.post('/upload', authenticateToken, upload.array('files'), async (req, res
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    // With S3, the file location is provided in the file object
-    const fileUrls = files.map(file => file.location);
+    const fileUrls = await Promise.all(files.map(file => uploadToSupabase(file)));
 
     // You might want to save these URLs to your database here
     // For example, if you're associating these files with a user:

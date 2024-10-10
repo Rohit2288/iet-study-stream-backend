@@ -146,7 +146,8 @@ const authRoutes = require('./routes/auth');
 const paperRoutes = require('./routes/papers');
 const chatRoutes = require('./routes/chat');
 const { authenticateToken } = require('./middleware/auth');
-const upload = require('./middleware/upload');
+
+
 
 const app = express();
 const httpServer = createServer(app);
