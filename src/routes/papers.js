@@ -180,24 +180,73 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, upload.fields([
-  { name: 'mst1', maxCount: 1 },
-  { name: 'mst2', maxCount: 1 },
-  { name: 'mst3', maxCount: 1 },
-  { name: 'endsem', maxCount: 1 },
-  { name: 'notes', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    const { subject, semester } = req.body;
-    const files = req.files;
+// Upload new paper (with Multer for file upload)
+// router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
+//   try {
+//     const { title, subject, semester } = req.body;
 
-    // Upload each file to Supabase and get URLs
-    const urls = {};
-    for (const [key, fileArray] of Object.entries(files)) {
-      if (fileArray && fileArray[0]) {
-        urls[`${key}Url`] = await uploadToSupabase(fileArray[0]);
-      }
+//     if (!req.file) {
+//       return res.status(400).json({ message: 'No file uploaded' });
+//     }
+
+//     // Generate full URL for the uploaded file
+//      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+//     //const fileUrl = `/uploads/${req.file.filename}`
+//     // Save paper details into Prisma
+//     const paper = await prisma.paper.create({
+//       data: {
+//         title,
+//         subject,
+//         semester: parseInt(semester),
+//         fileUrl: fileUrl, // Use the full URL
+//         userId: req.user.id // User is retrieved from the authenticated token
+//       }
+//     });
+
+//     res.status(201).json(paper);
+//   } catch (error) {
+//     console.error('Error uploading paper:', error);
+//     res.status(500).json({ message: 'Error uploading paper' });
+//   }
+// });
+// router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
+//   try {
+//     const { title, subject, semester } = req.body;
+
+//     if (!req.file) {
+//       return res.status(400).json({ message: 'No file uploaded' });
+//     }
+
+//     // The file URL is now provided by S3
+//     const fileUrl = req.file.location;
+
+//     // Save paper details into Prisma
+//     const paper = await prisma.paper.create({
+//       data: {
+//         title,
+//         subject,
+//         semester: parseInt(semester),
+//         fileUrl: fileUrl,
+//         userId: req.user.id
+//       }
+//     });
+
+//     res.status(201).json(paper);
+//   } catch (error) {
+//     console.error('Error uploading paper:', error);
+//     res.status(500).json({ message: 'Error uploading paper' });
+//   }
+// });
+router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
+
+    const { title, subject, semester } = req.body;
+
+    // Upload file to Supabase
+    const fileUrl = await uploadToSupabase(req.file);
 
     // Create paper record in database
     const paper = await prisma.paper.create({
