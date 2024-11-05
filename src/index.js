@@ -130,6 +130,8 @@
 //   console.log(`Server is running on port ${PORT}`);
 // });
 
+// 
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -147,14 +149,40 @@ const paperRoutes = require('./routes/papers');
 const chatRoutes = require('./routes/chat');
 const { authenticateToken } = require('./middleware/auth');
 
-
-
 const app = express();
 const httpServer = createServer(app);
+
+// Define allowed origins
+const allowedOrigins = [
+  'http://localhost:5173',  // Vite default development port
+  'http://localhost:3000',  // Alternative development port
+  'https://iet-study-stream.netlify.app',
+  process.env.CORS_ORIGIN
+].filter(Boolean); // Remove any undefined values
+
+// CORS configuration
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Socket.IO configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'https://iet-study-stream.netlify.app',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
   }
 });
@@ -164,23 +192,15 @@ const prisma = new PrismaClient();
 // Basic middleware
 app.use(express.json());
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [process.env.CORS_ORIGIN || 'https://iet-study-stream.netlify.app'];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'), false);
-    }
-  },
-  credentials: true
-};
+// Pre-flight requests
+app.options('*', cors());
 
-app.use(cors(corsOptions));
-
-// Serve static files from the uploads directory if not using S3
+// Serve static files
 if (process.env.USE_S3 !== 'true') {
   const uploadsPath = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+  }
   app.use('/uploads', express.static(uploadsPath));
 }
 
@@ -229,6 +249,11 @@ io.on('connection', (socket) => {
   });
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/papers', paperRoutes);
@@ -258,4 +283,5 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5001;
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log('Allowed Origins:', allowedOrigins);
 });
